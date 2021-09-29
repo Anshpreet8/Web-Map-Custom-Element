@@ -1,27 +1,35 @@
-const playwright = require("playwright");
+//const playwright = require("playwright");
 jest.setTimeout(30000);
 (async () => {
   for (const browserType of BROWSER) {
-    let page, browser, context;
+    //let page, browser, context;
     describe("UI Drag&Drop Test in " + browserType, () => {
-      beforeEach(async () => {
+      //beforeEach(async () => {
+        /*
         browser = await playwright[browserType].launch({
-          headless: ISHEADLESS,
+          headless: false,
           slowMo: 50,
         });
         context = await browser.newContext();
         page = await context.newPage();
+        
         if (browserType === "firefox") {
           await page.waitForNavigation();
         }
-        await page.goto(PATH + "drag.html");
-      });
+        */
+        //await jestPlaywright.resetPage();
+        //await page.goto(PATH + "drag.html");
+      //});
 
+      /*
       afterEach(async function () {
         await browser.close();
       });
+      */
+      
 
       test("[" + browserType + "]" + " Drag and drop of invalid HTML page", async () => {
+        await page.goto(PATH + "drag.html");
         const dataTransfer = await page.evaluateHandle(() =>
           new DataTransfer().setData("text/uri-list", "http://example.com")
         );
@@ -38,6 +46,7 @@ jest.setTimeout(30000);
       });
 
       test("[" + browserType + "]" + " Drag and drop of layers", async () => {
+        await page.goto(PATH + "drag.html");
         await page.hover(".leaflet-top.leaflet-right");
         let control = await page.$("xpath=//html/body/map >> css=div > div.leaflet-control-container > div.leaflet-top.leaflet-right > div > section > div.leaflet-control-layers-overlays > fieldset:nth-child(1)");
         let controlBBox = await control.boundingBox();
@@ -51,6 +60,7 @@ jest.setTimeout(30000);
       });
 
       test("[" + browserType + "]" + " Moving layer down one in control overlay", async () => {
+        await page.goto(PATH + "drag.html");
         await page.hover(".leaflet-top.leaflet-right");
         let control = await page.$("xpath=//html/body/map >> css=div > div.leaflet-control-container > div.leaflet-top.leaflet-right > div > section > div.leaflet-control-layers-overlays > fieldset:nth-child(1)");
         let controlBBox = await control.boundingBox();
@@ -79,6 +89,7 @@ jest.setTimeout(30000);
       });
 
       test("[" + browserType + "]" + " Moving layer up one in control overlay", async () => {
+        await page.goto(PATH + "drag.html");
         await page.hover(".leaflet-top.leaflet-right");
         let control = await page.$("xpath=//html/body/map >> css=div > div.leaflet-control-container > div.leaflet-top.leaflet-right > div > section > div.leaflet-control-layers-overlays > fieldset:nth-child(2)");
         let controlBBox = await control.boundingBox();

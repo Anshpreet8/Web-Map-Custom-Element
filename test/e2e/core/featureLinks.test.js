@@ -5,7 +5,9 @@ jest.setTimeout(50000);
     describe(
       "Playwright Feature Links Tests " + browserType,
       () => {
+        
         beforeAll(async () => {
+          /*
           browser = await playwright[browserType].launch({
             headless: ISHEADLESS,
             slowMo: 100,
@@ -15,12 +17,14 @@ jest.setTimeout(50000);
           if (browserType === "firefox") {
             await page.waitForNavigation();
           }
+          */
           await page.goto(PATH + "featureLinks.html");
         });
-
+        /*
         afterAll(async function () {
           await browser.close();
         });
+        */
         describe("Sub Part Link Tests in " + browserType, () => {
           test("[" + browserType + "]" + " Sub-point link adds new layer", async () => {
             for(let i = 0; i < 4; i++)
