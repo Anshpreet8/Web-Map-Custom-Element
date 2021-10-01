@@ -1,8 +1,6 @@
-//const playwright = require("playwright");
-
+const playwright = require("playwright");
 const { browsers } = require("../../../jest-playwright.config");
-
-//jest.setTimeout(50000);
+jest.setTimeout(50000);
 (async () => {
 
  

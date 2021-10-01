@@ -1,9 +1,8 @@
+const playwright = require("playwright");
 const { browsers } = require("../../../jest-playwright.config");
-
-//const playwright = require("playwright");
 jest.setTimeout(50000);
-browserType = browsers
-
+(async () => {
+  for (const browserType of browsers) {
     describe(
       "Playwright Layer Context Menu Tests in " + browserType,
       () => {
@@ -104,3 +103,5 @@ browserType = browsers
         });
       }
     );
+  }
+})();

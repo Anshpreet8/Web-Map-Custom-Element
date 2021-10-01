@@ -1,6 +1,5 @@
 const { browsers } = require("../../../jest-playwright.config");
-
-//const playwright = require("playwright");
+const playwright = require("playwright");
 jest.setTimeout(30000);
 (async () => {
   for (const browserType of browsers) {
