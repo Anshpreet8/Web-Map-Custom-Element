@@ -1,5 +1,6 @@
 jest.setTimeout(50000);
 const playwright = require("playwright");
+const { browsers } = require("../../../jest-playwright.config");
 
 (async () => {
 
@@ -42,24 +43,12 @@ const playwright = require("playwright");
       vertical: 10.170068283825733,
     },
   };
-  for (const browserType of BROWSER) {
+  for (const browserType of browsers) {
     describe(
       "Playwright Missing Min Max Attribute, Meta Default Tests in " + browserType,
       () => {
         beforeAll(async () => {
-          browser = await playwright[browserType].launch({
-            headless: ISHEADLESS,
-          });
-          context = await browser.newContext();
-          page = await context.newPage();
-          if (browserType === "firefox") {
-            await page.waitForNavigation();
-          }
           await page.goto(PATH + "metaDefault.html");
-        });
-
-        afterAll(async function () {
-          await browser.close();
         });
 
         test("[" + browserType + "]" + " Inline layer extent test", async () => {

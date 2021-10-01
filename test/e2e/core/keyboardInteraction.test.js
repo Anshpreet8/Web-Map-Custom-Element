@@ -1,26 +1,15 @@
 const playwright = require("playwright");
+const { browsers } = require("../../../jest-playwright.config");
 jest.setTimeout(50000);
 (async () => {
-  for (const browserType of BROWSER) {
+  for (const browserType of browsers) {
     describe(
       "Playwright Keyboard Navigation + Query Layer Tests in " + browserType,
       () => {
         beforeAll(async () => {
-          browser = await playwright[browserType].launch({
-            headless: ISHEADLESS,
-            slowMo: 50,
-          });
-          context = await browser.newContext();
-          page = await context.newPage();
-          if (browserType === "firefox") {
-            await page.waitForNavigation();
-          }
           await page.goto(PATH + "keyboardInteraction.html");
         });
-
-        afterAll(async function () {
-          await browser.close();
-        });
+        
         describe("Crosshair Tests in " + browserType, () => {
           test("[" + browserType + "]" + " Crosshair hidden onload, shows on focus", async () => {
             const beforeTabHidden = await page.$eval("div > div.mapml-crosshair", (div) => div.style.visibility);

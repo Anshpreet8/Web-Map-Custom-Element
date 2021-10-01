@@ -1,25 +1,14 @@
-const playwright = require("playwright");
+const { browsers } = require("../../../jest-playwright.config");
+
+//const playwright = require("playwright");
 jest.setTimeout(50000);
-(async () => {
-  for (const browserType of BROWSER) {
+browserType = browsers
+
     describe(
       "Playwright Layer Context Menu Tests in " + browserType,
       () => {
         beforeAll(async () => {
-          browser = await playwright[browserType].launch({
-            headless: ISHEADLESS,
-            slowMo: 50,
-          });
-          context = await browser.newContext();
-          page = await context.newPage();
-          if (browserType === "firefox") {
-            await page.waitForNavigation();
-          }
           await page.goto(PATH + "layerContextMenu.html");
-        });
-
-        afterAll(async function () {
-          await browser.close();
         });
 
         test("[" + browserType + "]" + " Layer context menu shows when layer is clicked", async () => {
@@ -115,5 +104,3 @@ jest.setTimeout(50000);
         });
       }
     );
-  }
-})();

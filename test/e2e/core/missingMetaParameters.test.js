@@ -1,24 +1,12 @@
 const playwright = require("playwright");
+const { browsers } = require("../../../jest-playwright.config");
 //Could use more tests
 jest.setTimeout(30000);
 (async () => {
-  for (const browserType of BROWSER) {
-    let page, browser, context;
+  for (const browserType of browsers) {
     describe("Missing Parameters Test in " + browserType, () => {
       beforeEach(async () => {
-        browser = await playwright[browserType].launch({
-          headless: ISHEADLESS,
-        });
-        context = await browser.newContext();
-        page = await context.newPage();
-        if (browserType === "firefox") {
-          await page.waitForNavigation();
-        }
         await page.goto(PATH + "missingMetaParameters.html");
-      });
-
-      afterEach(async function () {
-        await browser.close();
       });
 
       test("[" + browserType + "]" + " Static features with missing <map-meta name='zoom'></map-meta> & <map-meta name='extent'></map-meta>", async () => {

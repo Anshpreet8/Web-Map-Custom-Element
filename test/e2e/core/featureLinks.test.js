@@ -1,30 +1,15 @@
 const playwright = require("playwright");
+const { browsers } = require("../../../jest-playwright.config");
 jest.setTimeout(50000);
 (async () => {
-  for (const browserType of BROWSER) {
+  for (const browserType of browsers) {
     describe(
       "Playwright Feature Links Tests " + browserType,
       () => {
         
         beforeAll(async () => {
-          /*
-          browser = await playwright[browserType].launch({
-            headless: ISHEADLESS,
-            slowMo: 100,
-          });
-          context = await browser.newContext();
-          page = await context.newPage();
-          if (browserType === "firefox") {
-            await page.waitForNavigation();
-          }
-          */
           await page.goto(PATH + "featureLinks.html");
         });
-        /*
-        afterAll(async function () {
-          await browser.close();
-        });
-        */
         describe("Sub Part Link Tests in " + browserType, () => {
           test("[" + browserType + "]" + " Sub-point link adds new layer", async () => {
             for(let i = 0; i < 4; i++)

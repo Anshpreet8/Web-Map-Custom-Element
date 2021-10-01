@@ -1,25 +1,13 @@
 const playwright = require("playwright");
+const { browsers } = require("../../../jest-playwright.config");
 jest.setTimeout(50000);
 (async () => {
-  for (const browserType of BROWSER) {
-    let page, browser, context;
+  for (const browserType of browsers) {
     describe(
       "Style Parsed and Implemented Test in " + browserType,
       () => {
         beforeAll(async () => {
-          browser = await playwright[browserType].launch({
-            headless: ISHEADLESS,
-          });
-          context = await browser.newContext();
-          page = await context.newPage();
-          if (browserType === "firefox") {
-            await page.waitForNavigation();
-          }
           await page.goto(PATH + "styleParsing.html");
-        });
-
-        afterAll(async function () {
-          await browser.close();
         });
 
         //tests using the 1st map in the page

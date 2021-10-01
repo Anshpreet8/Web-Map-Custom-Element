@@ -1,24 +1,12 @@
 const playwright = require("playwright");
+const { browsers } = require("../../../jest-playwright.config");
 jest.setTimeout(30000);
 
 (async () => {
-  for (const browserType of BROWSER) {
-    let page, browser, context;
+  for (const browserType of browsers) {
     describe("Playwright Mismatched Layers Test in " + browserType, () => {
       beforeEach(async () => {
-        browser = await playwright[browserType].launch({
-          headless: ISHEADLESS,
-        });
-        context = await browser.newContext();
-        page = await context.newPage();
-        if (browserType === "firefox") {
-          await page.waitForNavigation();
-        }
         await page.goto(PATH);
-      });
-
-      afterEach(async function () {
-        await browser.close();
       });
 
       test("[" + browserType + "] " + "CBMTILE Map with OSMTILE layer", async () => {

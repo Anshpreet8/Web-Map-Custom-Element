@@ -1,23 +1,11 @@
 const playwright = require("playwright");
+const { browsers } = require("../../../jest-playwright.config");
 jest.setTimeout(30000);
 (async () => {
-  for (const browserType of BROWSER) {
-    let page, browser, context;
+  for (const browserType of browsers) {
     describe("UI Drag&Drop Test in " + browserType, () => {
       beforeEach(async () => {
-        browser = await playwright[browserType].launch({
-          headless: ISHEADLESS,
-        });
-        context = await browser.newContext();
-        page = await context.newPage();
-        if (browserType === "firefox") {
-          await page.waitForNavigation();
-        }
         await page.goto(PATH + "axisInferring.html");
-      });
-
-      afterEach(async function () {
-        await browser.close();
       });
 
       test("[" + browserType + "]" + " TileMatrix inferring", async () => {

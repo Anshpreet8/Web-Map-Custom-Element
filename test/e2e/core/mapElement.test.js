@@ -1,4 +1,5 @@
 const playwright = require("playwright");
+const { browsers } = require("../../../jest-playwright.config");
 jest.setTimeout(50000);
 (async () => {
 
@@ -17,25 +18,12 @@ jest.setTimeout(50000);
     { horizontal: 659, vertical: 730 },
     { horizontal: 771.4482758620691, vertical: 753.8620689655173 }];
 
-  for (const browserType of BROWSER) {
+  for (const browserType of browsers) {
     describe(
       "Playwright Map Element Tests in " + browserType,
       () => {
         beforeAll(async () => {
-          browser = await playwright[browserType].launch({
-            headless: ISHEADLESS,
-            slowMo: 50,
-          });
-          context = await browser.newContext();
-          page = await context.newPage();
-          if (browserType === "firefox") {
-            await page.waitForNavigation();
-          }
           await page.goto(PATH + "mapElement.html");
-        });
-
-        afterAll(async function () {
-          await browser.close();
         });
 
         test("[" + browserType + "]" + " Initial map element extent", async () => {
