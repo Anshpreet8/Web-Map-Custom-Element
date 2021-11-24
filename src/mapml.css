@@ -726,6 +726,7 @@ label.mapml-layer-item-toggle {
   padding-inline-end: 1rem;
 }
 
+<<<<<<< HEAD
 .mapml-screen-reader-output {
   clip: rect(0 0 0 0);
   clip-path: inset(50%);
@@ -734,4 +735,40 @@ label.mapml-layer-item-toggle {
   position: absolute;
   white-space: nowrap;
   width: 1px;
+=======
+.mapml-layer-item-settings summary {
+  -webkit-user-select: none;
+          user-select: none;
+}
+
+.mapml-layer-item-opacity [type="range"] {
+  margin-inline-end: 0;
+  margin-inline-start: 0;
+  width: 100%;
+}
+
+/*
+* Extent Elements in the Layer Control
+*/
+
+.mapml-layer-item-settings .mapml-layer-extent {
+  padding-inline-start: 1.8rem;
+  padding-block-end: 0.125rem;
+  padding-block-start: 0.125rem;
+}
+
+.mapml-layer-item-settings .mapml-layer-extent .mapml-layer-item-properties{
+  padding-inline-start: 0;
+}
+
+.mapml-layer-item-settings .mapml-layer-extent .mapml-layer-item-settings-control {
+  min-height: 30px;
+  min-width: 30px;
+  height: 30px;
+  width: 30px;
+}
+
+.mapml-layer-item-settings .mapml-layer-extent .mapml-layer-item-opacity {
+  padding-inline-start: 1.6rem;
+>>>>>>> d536b528... allowing multiple extents - all tests passing, layer has each individual's extent bounds
 }
