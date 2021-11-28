@@ -996,49 +996,10 @@ export var MapMLLayer = L.Layer.extend({
                 } else if (!projectionMatch && layer._map && layer._map.options.mapEl.querySelectorAll("layer-").length === 1){
                   layer._map.options.mapEl.projection = projection;
                   return;
-<<<<<<< HEAD
-                } else if (serverExtent.querySelector('map-link[rel=tile],map-link[rel=image],map-link[rel=features],map-link[rel=query]') &&
-                        serverExtent.hasAttribute("units")) {
-                  layer._templateVars = [];
-                  // set up the URL template and associated inputs (which yield variable values when processed)
-                  var tlist = serverExtent.querySelectorAll('map-link[rel=tile],map-link[rel=image],map-link[rel=features],map-link[rel=query]'),
-                      varNamesRe = (new RegExp('(?:\{)(.*?)(?:\})','g')),
-                      zoomInput = serverExtent.querySelector('map-input[type="zoom" i]'),
-                      includesZoom = false, extentFallback = {};
-
-                  extentFallback.zoom = 0;
-                  if (metaExtent){
-                    // if the extent is not in PCRS or GCRS, the user should supply
-                    // a zoom=n key within the meta content, so that the PCRS bounds
-                    // can be calculated
-                    let content = M.metaContentToObject(metaExtent.getAttribute("content"));
-                    
-                    // the extentFallback.zoom is used to calculate the PCRS bounds
-                    extentFallback.zoom = content.zoom || extentFallback.zoom;
-    
-                    let metaKeys = Object.keys(content);
-                    for(let i =0;i<metaKeys.length;i++){
-                      if(!metaKeys[i].includes("zoom")){
-                        // deduce the CS from the first recognized axis name, quit
-                        extentFallback.cs = M.axisToCS(metaKeys[i].split("-")[2]);
-                        break;
-                      }
-                    }
-                    let axes = M.csToAxes(extentFallback.cs);
-                    extentFallback.bounds = M.boundsToPCRSBounds(
-                      L.bounds(L.point(+content[`top-left-${axes[0]}`],+content[`top-left-${axes[1]}`]),
-                      L.point(+content[`bottom-right-${axes[0]}`],+content[`bottom-right-${axes[1]}`])),
-                      extentFallback.zoom, projection, extentFallback.cs);
-                    
-                  } else {
-                    extentFallback.bounds = M[projection].options.crs.pcrs.bounds;
-                    extentFallback.cs = "PCRS";
-=======
                 } else {
                   layer._extent = {};
                   if(projectionMatch){
                     layer._extent.crs = M[projection];
->>>>>>> d536b528... allowing multiple extents - all tests passing, layer has each individual's extent bounds
                   }
                     if(serverMeta){
                       // I dont think I need this
@@ -1057,114 +1018,9 @@ export var MapMLLayer = L.Layer.extend({
                         } 
                       } 
                     }
-<<<<<<< HEAD
-                    
-                    var v,
-                        title = t.hasAttribute('title') ? t.getAttribute('title') : 'Query this layer',
-                        vcount=template.match(varNamesRe),
-                        trel = (!t.hasAttribute('rel') || t.getAttribute('rel').toLowerCase() === 'tile') ? 'tile' : t.getAttribute('rel').toLowerCase(),
-                        ttype = (!t.hasAttribute('type')? 'image/*':t.getAttribute('type').toLowerCase()),
-                        inputs = [],
-                        tms = t && t.hasAttribute("tms");
-                        var zoomBounds = mapml.querySelector('map-meta[name=zoom]')?
-                                          M.metaContentToObject(mapml.querySelector('map-meta[name=zoom]').getAttribute('content')):
-                                          undefined;
-                    while ((v = varNamesRe.exec(template)) !== null) {
-                      var varName = v[1],
-                          inp = serverExtent.querySelector('map-input[name='+varName+'],map-select[name='+varName+']');
-                      if (inp) {
-                        // if location input is missing min/max, force set the
-                        // fallback min/max from the extentFallback
-                        if ((inp.hasAttribute("type") && inp.getAttribute("type")==="location") && 
-                            (!inp.hasAttribute("min" || !inp.hasAttribute("max"))) && 
-                            (inp.hasAttribute("axis") && !["i","j"].includes(inp.getAttribute("axis").toLowerCase()))){
-                          zoomInput.setAttribute("value", extentFallback.zoom);
-                          // set location input min/max axis values based on calculated 
-                          // and potentially converted from PCRS bounds read
-                          // from the <map-meta> element.  This is a fallback, but it only
-                          // works when the file includes location inputs.
-                          let axis = inp.getAttribute("axis"), 
-                              axisBounds = M.convertPCRSBounds(extentFallback.bounds, extentFallback.zoom, projection, M.axisToCS(axis));
-                          inp.setAttribute("min", axisBounds.min[M.axisToXY(axis)]);
-                          inp.setAttribute("max", axisBounds.max[M.axisToXY(axis)]);
-                        }
-
-                        inputs.push(inp);
-                        includesZoom = includesZoom || inp.hasAttribute("type") && inp.getAttribute("type").toLowerCase() === "zoom";
-                        if (inp.hasAttribute('shard')) {
-                          var id = inp.getAttribute('list');
-                          inp.servers = [];
-                          var servers = serverExtent.querySelectorAll('map-datalist#'+id + ' > map-option');
-                          if (servers.length === 0 && inp.hasAttribute('value')) {
-                            servers = inp.getAttribute('value').split('');
-                          }
-                          for (var s=0;s < servers.length;s++) {
-                            if (servers[s].getAttribute) {
-                              inp.servers.push(servers[s].getAttribute('value'));
-                            } else {
-                              inp.servers.push(servers[s]);
-                            }
-                          }
-                        } else if (inp.tagName.toLowerCase() === 'map-select') {
-                          // use a throwaway div to parse the input from MapML into HTML
-                          var div =document.createElement("div");
-                          div.insertAdjacentHTML("afterbegin",inp.outerHTML);
-                          // parse
-                          inp.htmlselect = div.querySelector("map-select");
-                          inp.htmlselect = transcribe(inp.htmlselect);
-
-                          // this goes into the layer control, so add a listener
-                          L.DomEvent.on(inp.htmlselect, 'change', layer.redraw, layer);
-                          if (!layer._userInputs) {
-                            layer._userInputs = [];
-                          }
-                          layer._userInputs.push(inp.htmlselect);
-                        }
-                        // TODO: if this is an input@type=location 
-                        // get the TCRS min,max attribute values at the identified zoom level 
-                        // save this information as properties of the serverExtent,
-                        // perhaps as a bounds object so that it can be easily used
-                        // later by the layer control to determine when to enable
-                        // disable the layer for drawing.
-                      } else {
-                        console.log('input with name='+varName+' not found for template variable of same name');
-                        // no match found, template won't be used
-                        break;
-                      }
-                    }
-                    if (template && vcount.length === inputs.length || template === BLANK_TT_TREF) {
-                      if (trel === 'query') {
-                        layer.queryable = true;
-                      }
-                      if(!includesZoom && zoomInput) {
-                        inputs.push(zoomInput);
-                      }
-                      // template has a matching input for every variable reference {varref}
-                      layer._templateVars.push({
-                        template:decodeURI(new URL(template, base)), 
-                        linkEl: t,
-                        title:title, 
-                        rel: trel, 
-                        type: ttype, 
-                        values: inputs, 
-                        zoomBounds:zoomBounds, 
-                        extentPCRSFallback: {bounds: extentFallback.bounds}, 
-                        projectionMatch: projectionMatch || selectedAlternate,
-                        projection:serverExtent.getAttribute("units") || FALLBACK_PROJECTION,
-                        tms:tms,
-                      });
-                    }
-                  }
-                }
-                layer._parseLicenseAndLegend(mapml, layer);
-                layer._extent = serverExtent;
-                
-                
-=======
                 }  
                 layer._parseLicenseAndLegend(mapml, layer, projection);
 
->>>>>>> d536b528... allowing multiple extents - all tests passing, layer has each individual's extent bounds
                 var zoomin = mapml.querySelector('map-link[rel=zoomin]'),
                     zoomout = mapml.querySelector('map-link[rel=zoomout]');
                 delete layer._extent.zoomin;
@@ -1214,11 +1070,7 @@ export var MapMLLayer = L.Layer.extend({
                     styleOptionInput = styleOption.appendChild(document.createElement('input'));
                     styleOptionInput.setAttribute("type", "radio");
                     styleOptionInput.setAttribute("id", "rad-"+L.stamp(styleOptionInput));
-<<<<<<< HEAD
-                    styleOptionInput.setAttribute("name", "styles-"+layer._title);
-=======
                     styleOptionInput.setAttribute("name", "styles-"+this._title);
->>>>>>> d536b528... allowing multiple extents - all tests passing, layer has each individual's extent bounds
                     styleOptionInput.setAttribute("value", styleLinks[j].getAttribute('title'));
                     styleOptionInput.setAttribute("data-href", new URL(styleLinks[j].getAttribute('href'),base).href);
                     var styleOptionLabel = styleOption.appendChild(document.createElement('label'));
