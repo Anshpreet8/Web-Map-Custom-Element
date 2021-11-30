@@ -92,7 +92,7 @@ export var MapMLLayer = L.Layer.extend({
         if(e.target.checked){
           //extent.templatedLayer._templates[0].layer.addTo(this._map);
           extent.checked = true;
-          this._getCombinedExtentsLayerBounds();
+          this._setLayerElExtent();
               extent.templatedLayer = M.templatedLayer(extent._templateVars, 
                 { pane: this._container,
                   _leafletLayer: this,
@@ -103,7 +103,7 @@ export var MapMLLayer = L.Layer.extend({
         } else {
             // remove and add extents again so layerbounds gets updated
             extent.checked = false;
-            this._getCombinedExtentsLayerBounds();
+            this._setLayerElExtent();
             this._removeExtents();
             this._addExtentsToMap(this._map);
         }
@@ -228,7 +228,7 @@ export var MapMLLayer = L.Layer.extend({
           }
           let inputData = M.extractInputBounds(this._extent._mapExtents[0]._templateVars[0]); // create the object myself
           this._extent.layerBounds = inputData.bounds;
-          this._getCombinedExtentsLayerBounds();
+          this._setLayerElExtent();
           this._addExtentsToMap(map);
         } else {
             this.once('extentload', function() {
@@ -262,8 +262,7 @@ export var MapMLLayer = L.Layer.extend({
             { pane: this._container,
               _leafletLayer: this,
               opacity: this._extent._mapExtents[i].opacity,
-              crs: this._extent._mapExtents[i].crs,
-              layerBounds: this._extent.layerBounds
+              crs: this._extent._mapExtents[i].crs
               }).addTo(map);   
               this._extent._mapExtents[i].templatedLayer = this._templatedLayer; 
               //delete this._templatedLayer;  
@@ -289,23 +288,43 @@ export var MapMLLayer = L.Layer.extend({
 
     //sets the <layer-> elements .bounds property 
     _setLayerElExtent: function(){
-      let localBounds, localZoomRanges;
+      let localBounds, localZoomRanges, tempBounds;
       let layerTypes = ["_staticTileLayer","_imageLayer","_mapmlvectors", "_templatedLayer"];
       layerTypes.forEach((type) =>{
         if(this[type]){
           if(type === "_templatedLayer"){
-            for(let j =0;j<this[type]._templates.length;j++){
-              if(this[type]._templates[j].rel === "query") continue;
-              if(this[type]._templates[j].layer.layerBounds){
-                if(!localBounds){
-                  localBounds = this[type]._templates[j].layer.layerBounds;
-                  localZoomRanges = this[type]._templates[j].layer.zoomBounds;
-                } else {
-                  localBounds.extend(this[type]._templates[j].layer.layerBounds.min);
-                  localBounds.extend(this[type]._templates[j].layer.layerBounds.max);
+            for(let i = 0; i < this._extent._mapExtents.length; i++){
+              if(this._extent._mapExtents[i].checked){
+                    for(let j = 0; j < this._extent._mapExtents[i]._templateVars.length; j++){
+                      if(!localBounds){
+                        localBounds = this._extent._mapExtents[i]._templateVars[j].extentBounds;
+                        localZoomRanges = this._extent._mapExtents[i]._templateVars[j].layer.zoomBounds;
+                      } else {
+                        localBounds.extend(this._extent._mapExtents[i]._templateVars[j].extentBounds.min);
+                        localBounds.extend(this._extent._mapExtents[i]._templateVars[j].extentBounds.max);
+                      }
+                    }
+                  }
                 }
+                this._extent.layerBounds = localBounds;
+            /*
+            for(let i = 0; i < this._extent._mapExtents.length; i++){
+              if(this._extent._mapExtents[i].checked){
+                  for(let j = 0; j < this._extent._mapExtents[i].templatedLayer._templates.length; j++){
+                    if(this._extent._mapExtents[i].templatedLayer._templates[j].rel === "query") continue;
+                    if(this._extent._mapExtents[i].templatedLayer._templates[j].layer.layerBounds){
+                      if(!localBounds){
+                        let clonedBounds = JSON.parse(JSON.stringify(this._extent._mapExtents[i].templatedLayer._templates[j].layer.layerBounds)); //Object.assign({}, this._extent._mapExtents[i].templatedLayer._templates[j].layer.layerBounds);
+                        localBounds = clonedBounds;
+                      } else {
+                        localBounds.extend(this._extent._mapExtents[i].templatedLayer._templates[j].layer.layerBounds.min);
+                        localBounds.extend(this._extent._mapExtents[i].templatedLayer._templates[j].layer.layerBounds.max);
+                      }
+                    }
+                  }
               }
-            } // for loop
+            }
+            */
           } else {
             if(this[type].layerBounds){
               if(!localBounds){
