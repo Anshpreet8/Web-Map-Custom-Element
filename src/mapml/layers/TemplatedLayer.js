@@ -1,6 +1,7 @@
 export var TemplatedLayer = L.Layer.extend({
   initialize: function(templates, options) {
     this._templates =  templates;
+    this.layerBounds = options.layerBounds;
     L.setOptions(this, options);
     this._container = L.DomUtil.create('div', 'leaflet-layer', options.pane);
     L.DomUtil.addClass(this._container,'mapml-templatedlayer-container');
