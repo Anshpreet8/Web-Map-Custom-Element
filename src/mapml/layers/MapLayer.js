@@ -342,7 +342,7 @@ export var MapMLLayer = L.Layer.extend({
     },
     redraw: function() {
       // for now, only redraw templated layers.
-        if (this._extent && this._extent._mapExtents) {
+        if (this._extent._mapExtents) {
           for(let i = 0; i < this._extent._mapExtents.length; i++){
             if(this._extent._mapExtents[i].templatedLayer){
               this._extent._mapExtents[i].templatedLayer.redraw();
@@ -384,7 +384,7 @@ export var MapMLLayer = L.Layer.extend({
         if(this._staticTileLayer) map.removeLayer(this._staticTileLayer);
         if(this._mapmlvectors) map.removeLayer(this._mapmlvectors);
         if(this._imageLayer) map.removeLayer(this._imageLayer);
-        if (this._extent) this._removeExtents(map);
+        if (this._extent && this._extent._mapExtents) this._removeExtents(map);
 
         map.fire("checkdisabled");
         map.off("popupopen", this._attachSkipButtons);
@@ -1006,7 +1006,7 @@ export var MapMLLayer = L.Layer.extend({
       (new URL(mapml.querySelector('map-base') ? mapml.querySelector('map-base').getAttribute('href') : mapml.baseURI || this.responseURL, this.responseURL)).href;
                 
                 if (!serverExtent.length && !serverMeta) {
-                    serverMeta = layer._synthesizeExtent(mapml);
+                    serverExtent = layer._synthesizeExtent(mapml);
                     // the mapml resource does not have a (complete) extent form, save
                     // its content if any so we don't have to revisit the server, ever.
                     if (mapml.querySelector('map-feature,map-tile')) {
@@ -1019,28 +1019,25 @@ export var MapMLLayer = L.Layer.extend({
                 } else if (!projectionMatch && layer._map && layer._map.options.mapEl.querySelectorAll("layer-").length === 1){
                   layer._map.options.mapEl.projection = projection;
                   return;
-                } else {
+                } else if (!serverMeta){
                   layer._extent = {};
                   if(projectionMatch){
                     layer._extent.crs = M[projection];
                   }
-                    if(serverMeta){
-                      // I dont think I need this
-                      layer._extent._mapExtents = [serverMeta];
-                    } else {
-                      layer._extent._mapExtents = []; // stores all the map-extent elements in the layer
-                      layer._extent._templateVars = []; // stores all template variables coming from all extents
-                      for(let j = 0; j < serverExtent.length; j++){
-                        if (serverExtent[j].querySelector('map-link[rel=tile],map-link[rel=image],map-link[rel=features],map-link[rel=query]') &&
-                          serverExtent[j].hasAttribute("units")) {
+                  layer._extent._mapExtents = []; // stores all the map-extent elements in the layer
+                  layer._extent._templateVars = []; // stores all template variables coming from all extents
+                  for(let j = 0; j < serverExtent.length; j++){
+                    if (serverExtent[j].querySelector('map-link[rel=tile],map-link[rel=image],map-link[rel=features],map-link[rel=query]') &&
+                        serverExtent[j].hasAttribute("units")) {
                           layer._extent._mapExtents.push(serverExtent[j]);
                           projectionMatch = projectionMatch || selectedAlternate;
                           let templateVars = _initTemplateVars.call(layer, serverExtent[j], metaExtent, projection, mapml, base, projectionMatch);
                           layer._extent._mapExtents[j]._templateVars = templateVars;
                           layer._extent._templateVars = layer._extent._templateVars.concat(templateVars);
                         } 
-                      } 
-                    }
+                      }     
+                } else {
+                  layer._extent = serverMeta;
                 }  
                 layer._parseLicenseAndLegend(mapml, layer, projection);
 
@@ -1054,7 +1051,7 @@ export var MapMLLayer = L.Layer.extend({
                 if (zoomout) {
                   layer._extent.zoomout = (new URL(zoomout.getAttribute('href'), base)).href;
                 }
-                if (layer._extent && layer._extent._mapExtents) {
+                if (layer._extent._mapExtents) {
                   for(let i = 0; i < layer._extent._mapExtents.length; i++){
                     if(layer._extent._mapExtents[i].templatedLayer){
                       layer._extent._mapExtents[i].templatedLayer.reset(layer._extent._mapExtents[i]._templateVars);
@@ -1183,61 +1180,25 @@ export var MapMLLayer = L.Layer.extend({
       if(!this._extent || !this._map){
         return;
       }
-      var serverExtent = this._extent._mapExtents, lp; // have a mapExtents.crs for each extent
+      var serverExtent = this._extent._mapExtents ? this._extent._mapExtents : [this._extent], lp;
         
         // loop through the map-extent elements and assign each one its crs
         for(let i = 0; i < serverExtent.length; i++){
           if (!serverExtent[i].querySelector) {
             return;
           }
-          if (serverExtent[i].querySelector('[type=xmin][min=""], [type=xmin][max=""], [type=xmax][min=""], [type=xmax][max=""], [type=ymin][min=""], [type=ymin][max=""]')) {
-            let xmin = serverExtent[i].querySelector('[type=xmin]'),
-                ymin = serverExtent[i].querySelector('[type=ymin]'),
-                xmax = serverExtent[i].querySelector('[type=xmax]'),
-                ymax = serverExtent[i].querySelector('[type=ymax]'),
-                proj = serverExtent[i].querySelector('[type=projection][value]'),
-                bounds, projection;
-              if (proj) {
-                  projection = proj.getAttribute('value');
-                  if (projection && projection === 'WGS84') {
-                    bounds = this._map.getBounds();
-                    xmin.setAttribute('min',bounds.getWest());
-                    xmin.setAttribute('max',bounds.getEast());
-                    ymin.setAttribute('min',bounds.getSouth());
-                    ymin.setAttribute('max',bounds.getNorth());
-                    xmax.setAttribute('min',bounds.getWest());
-                    xmax.setAttribute('max',bounds.getEast());
-                    ymax.setAttribute('min',bounds.getSouth());
-                    ymax.setAttribute('max',bounds.getNorth());
-                  } else if (projection) {
-                    // needs testing.  Also, this will likely be
-                    // messing with a server-generated extent.
-                    bounds = this._map.getPixelBounds();
-                    xmin.setAttribute('min',bounds.getBottomLeft().x);
-                    xmin.setAttribute('max',bounds.getTopRight().x);
-                    ymin.setAttribute('min',bounds.getTopRight().y);
-                    ymin.setAttribute('max',bounds.getBottomLeft().y);
-                    xmax.setAttribute('min',bounds.getBottomLeft().x);
-                    xmax.setAttribute('max',bounds.getTopRight().x);
-                    ymax.setAttribute('min',bounds.getTopRight().y);
-                    ymax.setAttribute('max',bounds.getBottomLeft().y);
-                  }
-              } else {
-                  this.error = true;
-          }
-
-        }
         if (serverExtent[i].querySelector('[type=zoom][min=""], [type=zoom][max=""]')) {
             var zoom = serverExtent[i].querySelector('[type=zoom]');
             zoom.setAttribute('min',this._map.getMinZoom());
             zoom.setAttribute('max',this._map.getMaxZoom());
         }
-        //if(this._extent._mapExtents){
           lp = serverExtent[i].hasAttribute("units") ? serverExtent[i].getAttribute("units") : null;
           if (lp && M[lp]) {
-            this._extent._mapExtents[i].crs = M[lp];
+            if(this._extent._mapExtents) this._extent._mapExtents[i].crs = M[lp];
+            else this._extent.crs = M[lp];
           } else {
-            this._extent._mapExtents[i].crs = M.OSMTILE;
+            if(this._extent._mapExtents) this._extent._mapExtents[i].crs = M.OSMTILE;
+            else this._extent.crs = M.OSMTILE;
           }
         }
     },
@@ -1328,7 +1289,7 @@ export var MapMLLayer = L.Layer.extend({
     // a layer must share a projection with the map so that all the layers can
     // be overlayed in one coordinate space.  WGS84 is a 'wildcard', sort of.
     getProjection: function () {
-      let extent = this._extent._mapExtents[0] || this._extent; // will probably throw an error if there aren't any in array, fix, also wont work for map-meta
+      let extent = this._extent._mapExtents ? this._extent._mapExtents[0] : this._extent; // the projections for each extent eould be the same (as) validated in _validProjection, so can use mapExtents[0]
       if(!extent) return FALLBACK_PROJECTION;
       switch (extent.tagName.toUpperCase()) {
         case "MAP-EXTENT":
