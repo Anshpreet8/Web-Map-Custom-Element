@@ -64,11 +64,11 @@ export var MapMLLayer = L.Layer.extend({
         }
     },
     // remove all the extents before removing the layer from the map
-    _removeExtents: function(){
+    _removeExtents: function(map){
       if(this._extent._mapExtents){
         for(let i = 0; i < this._extent._mapExtents.length; i++){
           if(this._extent._mapExtents[i].templatedLayer){
-            this._extent._mapExtents[i].templatedLayer.remove();
+            map.removeLayer(this._extent._mapExtents[i].templatedLayer);
           }
         }
       }
@@ -104,7 +104,7 @@ export var MapMLLayer = L.Layer.extend({
             // remove and add extents again so layerbounds gets updated
             extent.checked = false;
             this._getCombinedExtentsLayerBounds();
-            this._removeExtents();
+            this._removeExtents(this._map);
             this._addExtentsToMap(this._map);
         }
     },
@@ -236,14 +236,19 @@ export var MapMLLayer = L.Layer.extend({
                   this.validProjection = false;
                   return;
                 }
-                if (this._extent._mapExtents[0]._templateVars) { // it will always be 0 here, change to this.templateVars to make it more understandable?
-                  this._templatedLayer = M.templatedLayer(this._extent._mapExtents[0]._templateVars, 
-                  { pane: this._container,
-                    _leafletLayer: this,
-                    crs: this._extent._mapExtents[0].crs
-                  }).addTo(map);
-                  this._setLayerElExtent();
-                }
+                if(this._extent && this._extent._mapExtents){
+                  for(let i = 0; i < this._extent._mapExtents.length; i++){
+                    if (this._extent._mapExtents[i]._templateVars) { 
+                      this._templatedLayer = M.templatedLayer(this._extent._mapExtents[i]._templateVars, 
+                      { pane: this._container,
+                        _leafletLayer: this,
+                        crs: this._extent.crs
+                      }).addTo(map);
+                      this._extent._mapExtents[i].templatedLayer = this._templatedLayer;
+                      this._setLayerElExtent();
+                    }
+                  }
+                } 
               }, this);
         }
         this._setLayerElExtent();
@@ -262,7 +267,7 @@ export var MapMLLayer = L.Layer.extend({
             { pane: this._container,
               _leafletLayer: this,
               opacity: this._extent._mapExtents[i].opacity,
-              crs: this._extent._mapExtents[i].crs,
+              crs: this._extent.crs,
               layerBounds: this._extent.layerBounds
               }).addTo(map);   
               this._extent._mapExtents[i].templatedLayer = this._templatedLayer; 
@@ -337,8 +342,12 @@ export var MapMLLayer = L.Layer.extend({
     },
     redraw: function() {
       // for now, only redraw templated layers.
-        if (this._templatedLayer) {
-          this._templatedLayer.redraw();
+        if (this._extent && this._extent._mapExtents) {
+          for(let i = 0; i < this._extent._mapExtents.length; i++){
+            if(this._extent._mapExtents[i].templatedLayer){
+              this._extent._mapExtents[i].templatedLayer.redraw();
+            }
+          }
         }
     },
     _onZoomAnim: function(e) {
@@ -375,7 +384,7 @@ export var MapMLLayer = L.Layer.extend({
         if(this._staticTileLayer) map.removeLayer(this._staticTileLayer);
         if(this._mapmlvectors) map.removeLayer(this._mapmlvectors);
         if(this._imageLayer) map.removeLayer(this._imageLayer);
-        if (this._templatedLayer) map.removeLayer(this._templatedLayer);
+        if (this._extent) this._removeExtents(map);
 
         map.fire("checkdisabled");
         map.off("popupopen", this._attachSkipButtons);
@@ -480,7 +489,7 @@ export var MapMLLayer = L.Layer.extend({
         extentControlPath1 = L.SVG.create('path'),
         extentControlPath2 = L.SVG.create('path'),
         extentNameIcon = L.DomUtil.create('span'),
-        extentItemControls = L.DomUtil.create('span', 'mapml-layer-item-controls', extentProperties),
+        extentItemControls = L.DomUtil.create('div', 'mapml-layer-item-controls', extentProperties),
         opacityControl = L.DomUtil.create('details', 'mapml-layer-item-opacity', extentSettings),
         extentOpacitySummary = L.DomUtil.create('summary', '', opacityControl),
         opacity = L.DomUtil.create('input', '', opacityControl);
@@ -495,6 +504,19 @@ export var MapMLLayer = L.Layer.extend({
         extentControlPath2.setAttribute('d', 'M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z');
         svgExtentControlIcon.appendChild(extentControlPath1);
         svgExtentControlIcon.appendChild(extentControlPath2);
+
+        let removeExtentButton = L.DomUtil.create('button', 'mapml-layer-item-remove-control', extentItemControls);
+        removeExtentButton.type = 'button';
+        removeExtentButton.title = 'Remove Sub Layer';
+        removeExtentButton.innerHTML = "<span aria-hidden='true'>&#10005;</span>";
+        removeExtentButton.classList.add('mapml-button');
+        L.DomEvent.on(removeExtentButton, 'click', L.DomEvent.stop);
+        L.DomEvent.on(removeExtentButton, 'click', (e)=>{
+          e.target.checked = false;
+          this._changeExtent(e, this._extent._mapExtents[i]);
+          this._extent._mapExtents[i].extentAnatomy.parentNode.removeChild(this._extent._mapExtents[i].extentAnatomy);
+          //this._extent._mapExtents.splice(i, 1);
+        }, this);
 
         let extentsettingsButton = L.DomUtil.create('button', 'mapml-layer-item-settings-control', extentItemControls);
         extentsettingsButton.type = 'button';
@@ -714,16 +736,9 @@ export var MapMLLayer = L.Layer.extend({
           layerItemSettings.appendChild(this._styles);
         }
 
-        // if there are extents, add them to the layer control
-        if(this._extent && this._extent._mapExtents) {
-          for(let j=0; j < this._extent._mapExtents.length; j++) {
-            layerItemSettings.appendChild(this._extent._mapExtents[j].extentAnatomy);
-          }
-        }
-
         if (this._userInputs) {
           var frag = document.createDocumentFragment();
-          var templates = this._templateVars;
+          var templates = this._extent._templateVars;
           if (templates) {
             for (var i=0;i<templates.length;i++) {
               var template = templates[i];
@@ -747,6 +762,14 @@ export var MapMLLayer = L.Layer.extend({
           }
           layerItemSettings.appendChild(frag);
         }
+
+        // if there are extents, add them to the layer control
+        if(this._extent && this._extent._mapExtents) {
+          for(let j=0; j < this._extent._mapExtents.length; j++) {
+            layerItemSettings.appendChild(this._extent._mapExtents[j].extentAnatomy);
+          }
+        }
+
         return fieldset;
     },
     _initExtent: function(content) {
@@ -1031,8 +1054,13 @@ export var MapMLLayer = L.Layer.extend({
                 if (zoomout) {
                   layer._extent.zoomout = (new URL(zoomout.getAttribute('href'), base)).href;
                 }
-                if (layer._templatedLayer) {
-                  layer._templatedLayer.reset(layer._templateVars);
+                if (layer._extent && layer._extent._mapExtents) {
+                  for(let i = 0; i < layer._extent._mapExtents.length; i++){
+                    if(layer._extent._mapExtents[i].templatedLayer){
+                      layer._extent._mapExtents[i].templatedLayer.reset(layer._extent._mapExtents[i]._templateVars);
+                    }
+                  }
+                  
                 }
                 if (mapml.querySelector('map-tile')) {
                   var tiles = document.createElement("map-tiles"),
@@ -1050,6 +1078,7 @@ export var MapMLLayer = L.Layer.extend({
                 if(layer._extent._mapExtents){
                   for(let j = 0; j < layer._extent._mapExtents.length; j++){
                     var labelName = layer._extent._mapExtents[j].getAttribute('label');
+                    if(!labelName) labelName = layer._layerEl.getAttribute('label') + " Extent"; // temporariyl have the extent lableled by label name
                     var extentElement = layer.getLayerExtentHTML(labelName, j);
                     layer._extent._mapExtents[j].extentAnatomy = extentElement;
                   }
@@ -1211,10 +1240,6 @@ export var MapMLLayer = L.Layer.extend({
             this._extent._mapExtents[i].crs = M.OSMTILE;
           }
         }
-        //if(this._extent._mapExtents[0]._templateVars[0].projectionMatch){
-        //  this._extent.crs = M[lp];
-        //}
-      //}
     },
     _getMapMLExtent: function (bounds, zooms, proj) {
         
