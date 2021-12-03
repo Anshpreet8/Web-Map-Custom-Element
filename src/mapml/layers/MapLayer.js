@@ -111,20 +111,33 @@ export var MapMLLayer = L.Layer.extend({
 
     // if there are multiple extents, find the combined layerbounds
     _getCombinedExtentsLayerBounds: function(){
-      let bounds;
+      let bounds, zoomMax, zoomMin;
       for(let i = 0; i < this._extent._mapExtents.length; i++){
         if(this._extent._mapExtents[i].checked){
               for(let j = 0; j < this._extent._mapExtents[i]._templateVars.length; j++){
                 if(!bounds){
                   bounds = this._extent._mapExtents[i]._templateVars[j].extentBounds;
+                  zoomMax = this._extent._mapExtents[i]._templateVars[j].zoomBounds.max;
+                  zoomMin = this._extent._mapExtents[i]._templateVars[j].zoomBounds.min;
                 } else {
-                  bounds.extend(this._extent._mapExtents[i]._templateVars[j].extentBounds.min);
+                  bounds.extend(this._extent._mapExtents[i]._templateVars[j].extentBounds.min); // extentBounds are used since the object is passed by reference and I dont want it to change
                   bounds.extend(this._extent._mapExtents[i]._templateVars[j].extentBounds.max);
+                  zoomMax = Math.max(zoomMax, this._extent._mapExtents[i]._templateVars[j].zoomBounds.max);
+                  zoomMin = Math.min(zoomMin, this._extent._mapExtents[i]._templateVars[j].zoomBounds.min);
                 }
               }
             }
           }
           this._extent.layerBounds = bounds;
+          this._extent.zoomBounds = {minZoom: 0, maxZoom: 0};
+          this._extent.zoomBounds.maxZoom = zoomMax;
+          this._extent.zoomBounds.minZoom = zoomMin;
+          if(bounds){
+            //assigns the formatted extent object to .extent and spreads the zoom ranges to .extent also
+            this._layerEl.extent = (Object.assign(
+                                      M.convertAndFormatPCRS(bounds,this._map),
+                                      {zoom:this._extent.zoomBounds}));
+          }
       },
 
     onAdd: function (map) {
@@ -226,8 +239,6 @@ export var MapMLLayer = L.Layer.extend({
               this._extent._mapExtents[i]._templateVars[j].extentBounds = inputData.bounds;
             }
           }
-          let inputData = M.extractInputBounds(this._extent._mapExtents[0]._templateVars[0]); // create the object myself
-          this._extent.layerBounds = inputData.bounds;
           this._getCombinedExtentsLayerBounds();
           this._addExtentsToMap(map);
         } else {
@@ -268,7 +279,8 @@ export var MapMLLayer = L.Layer.extend({
               _leafletLayer: this,
               opacity: this._extent._mapExtents[i].opacity,
               crs: this._extent.crs,
-              layerBounds: this._extent.layerBounds
+              layerBounds: this._extent.layerBounds,
+              zoomBounds: this._extent.zoomBounds
               }).addTo(map);   
               this._extent._mapExtents[i].templatedLayer = this._templatedLayer; 
               //delete this._templatedLayer;  
@@ -516,6 +528,7 @@ export var MapMLLayer = L.Layer.extend({
           this._changeExtent(e, this._extent._mapExtents[i]);
           this._extent._mapExtents[i].extentAnatomy.parentNode.removeChild(this._extent._mapExtents[i].extentAnatomy);
           //this._extent._mapExtents.splice(i, 1);
+          // remove events
         }, this);
 
         let extentsettingsButton = L.DomUtil.create('button', 'mapml-layer-item-settings-control', extentItemControls);
