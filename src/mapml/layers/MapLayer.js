@@ -111,27 +111,43 @@ export var MapMLLayer = L.Layer.extend({
 
     // if there are multiple extents, find the combined layerbounds
     _getCombinedExtentsLayerBounds: function(){
-      let bounds, zoomMax, zoomMin;
+      let bounds, zoomMax, zoomMin, maxNativeZoom, minNativeZoom;
+
+      // get the bounds for each templateVars (need to get this again as value is being changed below - passed by ref)
+      for(let i = 0; i < this._extent._mapExtents.length; i++){
+        for(let j = 0; j < this._extent._mapExtents[i]._templateVars.length; j++){
+          let inputData = M.extractInputBounds(this._extent._mapExtents[i]._templateVars[j]);
+          this._extent._mapExtents[i]._templateVars[j].extentBounds = inputData.bounds;
+          this._extent._mapExtents[i]._templateVars[j].extentZoomBounds = inputData.zoomBounds;
+        }
+      }
+
       for(let i = 0; i < this._extent._mapExtents.length; i++){
         if(this._extent._mapExtents[i].checked){
               for(let j = 0; j < this._extent._mapExtents[i]._templateVars.length; j++){
                 if(!bounds){
                   bounds = this._extent._mapExtents[i]._templateVars[j].extentBounds;
-                  zoomMax = this._extent._mapExtents[i]._templateVars[j].zoomBounds.max;
-                  zoomMin = this._extent._mapExtents[i]._templateVars[j].zoomBounds.min;
+                  zoomMax = this._extent._mapExtents[i]._templateVars[j].extentZoomBounds.maxZoom;
+                  zoomMin = this._extent._mapExtents[i]._templateVars[j].extentZoomBounds.minZoom;
+                  maxNativeZoom = this._extent._mapExtents[i]._templateVars[j].extentZoomBounds.maxNativeZoom;
+                  minNativeZoom = this._extent._mapExtents[i]._templateVars[j].extentZoomBounds.minNativeZoom;
                 } else {
-                  bounds.extend(this._extent._mapExtents[i]._templateVars[j].extentBounds.min); // extentBounds are used since the object is passed by reference and I dont want it to change
+                  bounds.extend(this._extent._mapExtents[i]._templateVars[j].extentBounds.min);
                   bounds.extend(this._extent._mapExtents[i]._templateVars[j].extentBounds.max);
-                  zoomMax = Math.max(zoomMax, this._extent._mapExtents[i]._templateVars[j].zoomBounds.max);
-                  zoomMin = Math.min(zoomMin, this._extent._mapExtents[i]._templateVars[j].zoomBounds.min);
+                  zoomMax = Math.max(zoomMax, this._extent._mapExtents[i]._templateVars[j].extentZoomBounds.maxZoom);
+                  zoomMin = Math.min(zoomMin, this._extent._mapExtents[i]._templateVars[j].extentZoomBounds.minZoom);
+                  maxNativeZoom = Math.max(maxNativeZoom, this._extent._mapExtents[i]._templateVars[j].extentZoomBounds.maxNativeZoom);
+                  minNativeZoom = Math.min(minNativeZoom, this._extent._mapExtents[i]._templateVars[j].extentZoomBounds.minNativeZoom);
                 }
               }
             }
           }
           this._extent.layerBounds = bounds;
-          this._extent.zoomBounds = {minZoom: 0, maxZoom: 0};
+          this._extent.zoomBounds = {minZoom: 0, maxZoom: 0, maxNativeZoom: 0, minNativeZoom: 0};
           this._extent.zoomBounds.maxZoom = zoomMax;
           this._extent.zoomBounds.minZoom = zoomMin;
+          this._extent.zoomBounds.minNativeZoom = minNativeZoom;
+          this._extent.zoomBounds.maxNativeZoom = maxNativeZoom;
           if(bounds){
             //assigns the formatted extent object to .extent and spreads the zoom ranges to .extent also
             this._layerEl.extent = (Object.assign(
@@ -232,13 +248,6 @@ export var MapMLLayer = L.Layer.extend({
 
         // if the extent has been initialized and received, update the map,
         if (this._extent && this._extent._mapExtents && this._extent._mapExtents[0]._templateVars) {
-          // get the bounds for each templateVars
-          for(let i = 0; i < this._extent._mapExtents.length; i++){
-            for(let j = 0; j < this._extent._mapExtents[i]._templateVars.length; j++){
-              let inputData = M.extractInputBounds(this._extent._mapExtents[i]._templateVars[j]);
-              this._extent._mapExtents[i]._templateVars[j].extentBounds = inputData.bounds;
-            }
-          }
           this._getCombinedExtentsLayerBounds();
           this._addExtentsToMap(map);
         } else {
@@ -256,7 +265,7 @@ export var MapMLLayer = L.Layer.extend({
                         crs: this._extent.crs
                       }).addTo(map);
                       this._extent._mapExtents[i].templatedLayer = this._templatedLayer;
-                      this._setLayerElExtent();
+                      this._getCombinedExtentsLayerBounds();
                     }
                   }
                 } 
@@ -282,8 +291,7 @@ export var MapMLLayer = L.Layer.extend({
               layerBounds: this._extent.layerBounds,
               zoomBounds: this._extent.zoomBounds
               }).addTo(map);   
-              this._extent._mapExtents[i].templatedLayer = this._templatedLayer; 
-              //delete this._templatedLayer;  
+              this._extent._mapExtents[i].templatedLayer = this._templatedLayer;   
         }
        }
     },
@@ -307,23 +315,9 @@ export var MapMLLayer = L.Layer.extend({
     //sets the <layer-> elements .bounds property 
     _setLayerElExtent: function(){
       let localBounds, localZoomRanges;
-      let layerTypes = ["_staticTileLayer","_imageLayer","_mapmlvectors", "_templatedLayer"];
+      let layerTypes = ["_staticTileLayer","_imageLayer","_mapmlvectors"];
       layerTypes.forEach((type) =>{
         if(this[type]){
-          if(type === "_templatedLayer"){
-            for(let j =0;j<this[type]._templates.length;j++){
-              if(this[type]._templates[j].rel === "query") continue;
-              if(this[type]._templates[j].layer.layerBounds){
-                if(!localBounds){
-                  localBounds = this[type]._templates[j].layer.layerBounds;
-                  localZoomRanges = this[type]._templates[j].layer.zoomBounds;
-                } else {
-                  localBounds.extend(this[type]._templates[j].layer.layerBounds.min);
-                  localBounds.extend(this[type]._templates[j].layer.layerBounds.max);
-                }
-              }
-            } // for loop
-          } else {
             if(this[type].layerBounds){
               if(!localBounds){
                 localBounds = this[type].layerBounds;
@@ -333,7 +327,7 @@ export var MapMLLayer = L.Layer.extend({
                 localBounds.extend(this[type].layerBounds.max);
               }
             } 
-          }
+          
           }       
       });
 
@@ -363,12 +357,19 @@ export var MapMLLayer = L.Layer.extend({
         }
     },
     _onZoomAnim: function(e) {
-      // TODO: calculate min and max for when there are multiple extents
+      // get the min and max zooms from all extents
       var toZoom = e.zoom,
-          zoom = (this._extent && this._extent._mapExtents) ? this._extent._mapExtents[0].querySelector("map-input[type=zoom]") : null, 
+          zoom = (this._extent && this._extent._mapExtents) ? this._extent._mapExtents[0].querySelector("map-input[type=zoom]") : null,
           min = zoom && zoom.hasAttribute("min") ? parseInt(zoom.getAttribute("min")) : this._map.getMinZoom(),
-          max =  zoom && zoom.hasAttribute("max") ? parseInt(zoom.getAttribute("max")) : this._map.getMaxZoom(),
-          canZoom = (toZoom < min && this._extent.zoomout) || (toZoom > max && this._extent.zoomin);
+          max =  zoom && zoom.hasAttribute("max") ? parseInt(zoom.getAttribute("max")) : this._map.getMaxZoom();
+      if(zoom){
+        for(let i = 1; i < this._extent._mapExtents.length; i++){
+          zoom = this._extent._mapExtents[i].querySelector("map-input[type=zoom]");
+          if(zoom && zoom.hasAttribute("min")) { min = Math.min(parseInt(zoom.getAttribute("min")), min); }
+          if(zoom && zoom.hasAttribute("max")){ max = Math.max(parseInt(zoom.getAttribute("max")), max); }
+        }
+      }
+      var canZoom = (toZoom < min && this._extent.zoomout) || (toZoom > max && this._extent.zoomin);
       if (!(min <= toZoom && toZoom <= max)){
         if (this._extent.zoomin && toZoom > max) {
           // this._href is the 'original' url from which this layer came
@@ -983,6 +984,7 @@ export var MapMLLayer = L.Layer.extend({
         }
 
         function _processInitialExtent(content) {
+          //TODO: include inline extents
             var mapml = this.responseXML || content;
             if(mapml.querySelector && mapml.querySelector('map-feature'))layer._content = mapml;
             if(!this.responseXML && this.responseText) mapml = new DOMParser().parseFromString(this.responseText,'text/xml');
@@ -1356,6 +1358,7 @@ export var MapMLLayer = L.Layer.extend({
         return true;
     },
     getQueryTemplates: function() {
+      // TODO: fix and test
         if (this._templatedLayer && this._templatedLayer._queries) {
           return this._templatedLayer._queries;
         }
@@ -1374,6 +1377,7 @@ export var MapMLLayer = L.Layer.extend({
         layer = popup._source._eventParents[Object.keys(popup._source._eventParents)[0]]; // get first parent of feature, there should only be one
         group = popup._source.group;
       } else {
+        // TODO: fix and test
         layer = popup._source._templatedLayer;
       }
 
