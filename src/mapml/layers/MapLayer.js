@@ -291,7 +291,11 @@ export var MapMLLayer = L.Layer.extend({
               layerBounds: this._extent.layerBounds,
               zoomBounds: this._extent.zoomBounds
               }).addTo(map);   
-              this._extent._mapExtents[i].templatedLayer = this._templatedLayer;   
+              this._extent._mapExtents[i].templatedLayer = this._templatedLayer;
+              if(this._templatedLayer._queries){
+                if(!this._extent._queries) this._extent._queries = [];
+                this._extent._queries = this._extent._queries.concat(this._templatedLayer._queries);
+              }
         }
        }
     },
@@ -1358,9 +1362,8 @@ export var MapMLLayer = L.Layer.extend({
         return true;
     },
     getQueryTemplates: function() {
-      // TODO: fix and test
-        if (this._templatedLayer && this._templatedLayer._queries) {
-          return this._templatedLayer._queries;
+        if (this._extent && this._extent._queries) {
+          return this._extent._queries;
         }
     },
     _attachSkipButtons: function(e){
@@ -1377,7 +1380,6 @@ export var MapMLLayer = L.Layer.extend({
         layer = popup._source._eventParents[Object.keys(popup._source._eventParents)[0]]; // get first parent of feature, there should only be one
         group = popup._source.group;
       } else {
-        // TODO: fix and test
         layer = popup._source._templatedLayer;
       }
 
