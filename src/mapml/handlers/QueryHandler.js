@@ -42,8 +42,7 @@ export var QueryHandler = L.Handler.extend({
         }
     },
     _query(e, layer) {
-      var templates = layer.getQueryTemplates(),
-          zoom = e.target.getZoom(),
+      var zoom = e.target.getZoom(),
           map = this._map,
           crs = layer._extent.crs, // the crs for each extent would be the same
           tileSize = map.options.crs.options.crs.tile.bounds.max.x,
@@ -64,6 +63,7 @@ export var QueryHandler = L.Handler.extend({
           scale = this._map.options.crs.scale(this._map.getZoom()),
           pcrsClick = this._map.options.crs.transformation.untransform(point,scale),
           contenttype;
+      var templates = layer.getQueryTemplates(pcrsClick);
 
       var fetchFeatures = function(template, obj, lastOne) {
         fetch(L.Util.template(template.template, obj), { redirect: 'follow' }).then((response) => {

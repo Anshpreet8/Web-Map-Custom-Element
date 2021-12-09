@@ -102,6 +102,7 @@ export var MapMLLayer = L.Layer.extend({
                 }).addTo(this._map);         
         } else {
             // remove and add extents again so layerbounds gets updated
+            L.DomEvent.stopPropagation(e);
             extent.checked = false;
             this._getCombinedExtentsLayerBounds();
             this._removeExtents(this._map);
@@ -1361,9 +1362,16 @@ export var MapMLLayer = L.Layer.extend({
         if (!map.options.projection || projection !== 'WGS84' && map.options.projection !== projection) return false;
         return true;
     },
-    getQueryTemplates: function() {
+    getQueryTemplates: function(pcrsClick) {
         if (this._extent && this._extent._queries) {
-          return this._extent._queries;
+          var templates = [];
+          // only return queries that are in bound
+          for(let i = 0; i < this._extent._queries.length; i++){
+            if(this._extent._queries[i].layerBounds.contains(pcrsClick)){
+              templates.push(this._extent._queries[i]);
+            }
+          }
+          return templates;
         }
     },
     _attachSkipButtons: function(e){
